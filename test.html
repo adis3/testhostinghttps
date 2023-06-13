@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bluetooth Serial Web App</title>
+</head>
+<body>
+  <h1>Bluetooth Serial Web App</h1>
+  
+  <textarea id="commandInput" rows="4" cols="50"></textarea>
+  <button id="sendButton">Send Command</button>
+  <p id="response"></p>
+
+  <script>
+    // Check if the browser supports the Web Bluetooth API
+    if ('bluetooth' in navigator) {
+      const commandInput = document.getElementById('commandInput');
+      const sendButton = document.getElementById('sendButton');
+      const responseElement = document.getElementById('response');
+      let characteristic;
+
+      // Add event listener to the send button
+      sendButton.addEventListener('click', async () => {
+        const command = commandInput.value;
+        if (command) {
+          try {
+            // Send command to the Bluetooth serial port
+            await characteristic.writeValue(new TextEncoder().encode(command));
+          } catch (error) {
+            console.error('Error sending command:', error);
+          }
+        }
+      });
+
+      // Request Bluetooth device and connect to the chosen device
+      async function connectToDevice() {
+        try {
+          const device = await navigator.bluetooth.requestDevice({
+            filters: [{ services: ['serial'] }],
+          });
+
+          const server = await device.gatt.connect();
+          const service = await server.getPrimaryService('serial');
+          characteristic = await service.getCharacteristic('serial');
+
+          // Listen for response from the Bluetooth device
+          characteristic.addEventListener('characteristicvaluechanged', (event) => {
+            const response = new TextDecoder().decode(event.target.value);
+            responseElement.textContent = response;
+          });
+
+          // Enable notifications for the characteristic to receive responses
+          await characteristic.startNotifications();
+        } catch (error) {
+          console.error('Error connecting to Bluetooth device:', error);
+        }
+      }
+
+      // Call the connectToDevice function to start the connection process
+      connectToDevice();
+    } else {
+      alert('Web Bluetooth API is not supported in this browser.');
+    }
+  </script>
+</body>
+</html>
